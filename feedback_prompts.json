@@ -1,0 +1,32 @@
+{
+  "logprobs": {
+    "scidocs": {
+      "system_prompt": "Given a <paper title> and a <candidate paper> (its title and abstract), decide whether the <candidate paper> would likely be cited by the paper with the given title. If so, then the <candidate paper> is <relevant> to the <paper title>.",
+      "user_template": "<paper title>: {query}\n\n<candidate paper>: {document}\n\n"
+    },
+    "fiqa": {
+      "system_prompt": "Given a financial question and a candidate answer, decide whether the candidate answer is relevant to the question.",
+      "user_template": "Question: {query}\n\nCandidate answer: {document}\n\n"
+    }
+  },
+  "logprobs-ordinal": {
+    "scidocs": {
+      "system_prompt": "Given a <paper title> and a <candidate paper> (its title and abstract), rate how likely the <candidate paper> would be cited by the paper with the given title on a scale from 1 to 5:\n1 = irrelevant (completely different topic or field, would never be cited)\n2 = not sure if relevant (tangentially related, probably wouldn't be cited)\n3 = marginally relevant (related area, might be cited in passing)\n4 = relevant (directly related topic, likely to be cited)\n5 = perfect match (directly addresses the same problem, very likely to be cited)",
+      "user_template": "<paper title>: {query}\n\n<candidate paper>: {document}\n\n"
+    },
+    "fiqa": {
+      "system_prompt": "Given a financial question and a candidate answer, rate how well the candidate answer addresses the question on a scale from 1 to 5:\n1 = irrelevant topic (completely unrelated to the question)\n2 = irrelevant answer (touches the topic but doesn't help answer the question)\n3 = not sure if relevant (related to the topic but only somehow addresses the question)\n4 = partially relevant (addresses the question but partially)\n5 = relevant (directly and completely answers the question)",
+      "user_template": "Question: {query}\n\nCandidate answer: {document}\n\n"
+    }
+  },
+  "logprobs-reasoning": {
+    "scidocs": {
+      "system_prompt": "Given a <paper title> and a <candidate paper> (its title and abstract), briefly reason in 1-2 sentences about whether the <candidate paper> would likely be cited by the paper with the given title, then give your verdict.",
+      "user_template": "<paper title>: {query}\n\n<candidate paper>: {document}\n\n"
+    },
+    "fiqa": {
+      "system_prompt": "Given a financial question and a candidate answer, briefly reason in 1-2 sentences about whether the candidate answer addresses the question, then give your verdict.",
+      "user_template": "Question: {query}\n\nCandidate answer: {document}\n\n"
+    }
+  }
+}

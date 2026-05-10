@@ -1,0 +1,18 @@
+{
+  "logprobs": {
+    "scidocs": 0.00004545,
+    "fiqa": 0.00003270
+  },
+  "logprobs-ordinal": {
+    "scidocs": 0.00005400,
+    "fiqa": 0.00004300
+  },
+  "logprobs-reasoning": {
+    "scidocs": 0.00008625,
+    "fiqa": 0.00007350
+  },
+  "openai-emb": {
+    "scidocs": 0.00002600,
+    "fiqa": 0.00001950
+  }
+}

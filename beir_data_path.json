@@ -1,0 +1,4 @@
+{
+  "scidocs": "./datasets/scidocs",
+  "fiqa": "./datasets/fiqa"
+}
