@@ -12,7 +12,7 @@ Methods
 3. rf        : retrieve --rf-context-limit docs, rescore with Feedback model, run RF query
                (--rf-limit docs), rescore RF results with Feedback model, merge by score
 4. pure-rf   : retrieve --rf-context-limit docs, rescore with Feedback model, run RF query
-               (--rf-limit docs)
+               (--rf-limit + --rf-context-limit docs)
 """
 
 import argparse
@@ -360,9 +360,13 @@ def main():
     lats: dict[str, list[float]] = {"baseline": [], **{m: [] for m in args.methods}}
     skipped: set[str] = set()
 
-    DISC_CUTOFFS = [1, 3, 5, 10]
+    DISC_CUTOFFS = [1, 3, 5, 10, args.rf_limit + args.rf_context_limit] # we assume args.rf_limit + args.rf_context_limit >= 10 always in these experiments
     rf_methods = [m for m in ("rf", "pure-rf") if m in selected_methods]
     disc_counts: dict[str, dict[int, int]] = {m: {k: 0 for k in DISC_CUTOFFS} for m in rf_methods}
+    # disc_denominator[k] = sum_q min(k, |unreachable_relevant_q|)
+    # = total discoverable relevant docs at cutoff k across all queries.
+    # Can only be 0 if reranker achieves 100% recall on every query — not the case in practice.
+    disc_denominator: dict[int, int] = {k: 0 for k in DISC_CUTOFFS}
 
     print(f"\nRunning benchmark (methods: baseline + {', '.join(args.methods) or 'none'})...")
     for qid in tqdm.tqdm(eval_query_ids):
@@ -396,7 +400,7 @@ def main():
         if "pure-rf" in selected_methods:
             active_methods.append(("pure-rf", lambda: pure_rf_retrieval(
                 client, feedback_model, query_text, query_embedding,
-                formula_params, args.rf_context_limit, args.rf_limit,
+                formula_params, args.rf_context_limit, args.rf_limit + args.rf_context_limit,
                 collection_name, vector_name,
             )))
 
@@ -423,14 +427,16 @@ def main():
                         using=vector_name,
                     ).points
                 }
-                unreachable_relevant = set(qrels_dict[qid].keys()) - rerank_pool_ids
+                unreachable_relevant = set(qrels_dict[qid].keys()) - rerank_pool_ids # check
+                for k in DISC_CUTOFFS:
+                    disc_denominator[k] += min(k, len(unreachable_relevant))
                 for m in rf_methods:
-                    top10 = list(runs[m][qid].keys())[:10]
-                    mask = [1 if doc_id in unreachable_relevant else 0 for doc_id in top10]
-                    disc_counts[m][1]  += mask[0] if mask else 0
+                    mask = [1 if doc_id in unreachable_relevant else 0 for doc_id in list(runs[m][qid].keys())]
+                    disc_counts[m][1]  += mask[0]
                     disc_counts[m][3]  += sum(mask[:3])
                     disc_counts[m][5]  += sum(mask[:5])
-                    disc_counts[m][10] += sum(mask)
+                    disc_counts[m][10] += sum(mask[:10])
+                    disc_counts[m][args.rf_limit + args.rf_context_limit] += sum(mask)
 
     if skipped:
         print(f"\nSkipped {len(skipped)} queries: {skipped}")
@@ -454,7 +460,7 @@ def main():
         ("baseline", f"1. Baseline  (retrieve {args.baseline_limit})",                                        0.0),
         ("rerank",   f"2. Rerank  (retrieve {args.rerank_limit} → Feedback Model rerank)",                    est_cost(args.rerank_limit)),
         ("rf",       f"3. RF+Rerank  ({args.rf_context_limit} fb → {args.rf_limit} RF → merge by rerank)",   est_cost(args.rf_context_limit + args.rf_limit)),
-        ("pure-rf",  f"4. Pure RF  ({args.rf_context_limit} context → {args.rf_limit} RF docs)",       est_cost(args.rf_context_limit)),
+        ("pure-rf",  f"4. Pure RF  ({args.rf_context_limit} context → {args.rf_limit + args.rf_context_limit} RF docs)",       est_cost(args.rf_context_limit)),
     ]
 
     rows = []
@@ -491,7 +497,7 @@ def main():
     if rf_methods:
         disc_labels = {
             "rf":      f"3. RF+Rerank  ({args.rf_context_limit} fb → {args.rf_limit} RF → merge by rerank)",
-            "pure-rf": f"4. Pure RF  ({args.rf_context_limit} context → {args.rf_limit} RF docs)",
+            "pure-rf": f"4. Pure RF  ({args.rf_context_limit} context → {args.rf_limit + args.rf_context_limit} RF docs)",
         }
         disc_col = 9
         disc_method_col = max(len(disc_labels[m]) for m in rf_methods) + 2
@@ -505,7 +511,12 @@ def main():
         print("-" * DW)
         for m in rf_methods:
             row = "".join(f"{disc_counts[m][k]:>{disc_col}}" for k in DISC_CUTOFFS)
+            norm_row = "".join(
+                f"{disc_counts[m][k] / disc_denominator[k]:>{disc_col}.3f}" if disc_denominator[k] > 0 else f"{'N/A':>{disc_col}}" #N/A -> was nothing to discover, reranker recall 100%
+                for k in DISC_CUTOFFS
+            )
             print(f"  {disc_labels[m]:<{disc_method_col}}{row}")
+            print(f"  {'  (norm)': <{disc_method_col}}{norm_row}")
         print("=" * DW)
         print()
 
