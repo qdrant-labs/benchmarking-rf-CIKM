@@ -38,7 +38,7 @@ Retrievers: `jina` (`jina-embeddings-v2-base-en`, 768d) · `mxbread` (`mxbai-emb
 measured with `ranx`
 - **Recall@[1, 3, 5, 10]** & **nDCG@10**.
 and
-- **disc@N** — custom discovery metric. Counts how many documents RF-based methods ranked in the top-N that were *unreachable* by the reranker (i.e., outside its initial fetch window).
+- **disc@N** — custom discovery metric. Counts how many documents RF-based methods ranked in the top-N that were *unreachable* by the reranker (i.e., outside its initial fetch window). Normalized by the maximum number of such documents RF could have surfaced at cutoff N across all queries: a value of 0.07 means RF placed 7% of theoretically discoverable relevant documents into the top-N window.
 
 ## Usage
 
