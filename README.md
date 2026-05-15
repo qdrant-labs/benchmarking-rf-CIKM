@@ -28,18 +28,6 @@ Grid search over retrieval hyperparameters: `grid_search.sh [dataset]`
 | `feedback_prompts.json` | dataset-specific prompts for logprobs models |
 | `cost_per_call.json` | estimated cost per (query, document) scoring call |
 
-## Datasets & retrievers
-
-Datasets: **SciDocs** (citation prediction, 25k corpus) · **FiQA** (financial QA, 57k corpus)
-Retrievers: `jina` (`jina-embeddings-v2-base-en`, 768d) · `mxbread` (`mxbai-embed-large-v1`, 1024d)
-
-## Metrics
-
-measured with `ranx`
-- **Recall@[1, 3, 5, 10]** & **nDCG@10**.
-and
-- **disc@N** — custom discovery metric. Counts how many documents RF-based methods ranked in the top-N that were *unreachable* by the reranker (i.e., outside its initial fetch window). Normalized by the maximum number of such documents RF could have surfaced at cutoff N across all queries: a value of 0.07 means RF placed 7% of theoretically discoverable relevant documents into the top-N window.
-
 ## Usage
 
 ```bash
@@ -68,9 +56,6 @@ uv run python benchmark.py --dataset fiqa --retriever jina   --feedback-model op
 # Baseline + rerank only (skip RF methods):
 uv run python benchmark.py --dataset fiqa --retriever mxbread --feedback-model openai-emb --eval-start 148 --n-eval-queries 500 --methods rerank
 
-# Rerank-only sweep across all dataset × retriever × feedback model combinations
-bash rerank_search.sh
-
 # Full grid search (rerank + RF hyperparameters)
 # Second argument is eval-start (= --n-train-queries used in step 3)
 bash grid_search.sh fiqa 148
@@ -89,7 +74,7 @@ bash grid_search.sh fiqa 148
 | `--baseline-limit` | | `10` | Docs retrieved by ANN for baseline. Also the evaluation cutoff — Recall@N and nDCG@10 are computed over this top-N |
 | `--rerank-limit` | | `25` | Pool size for reranking: ANN fetches this many docs, all rescored by the feedback model, top-`--baseline-limit` kept |
 | `--rf-context-limit` | | `5` | Docs scored by the feedback model to form the RF signal (positive/negative examples passed to Qdrant RF API) |
-| `--rf-limit` | | `20` | Extra docs fetched by the RF query. For `rf` (RF+Rerank): these are rescored and merged with the context docs. For `pure-rf`: these are returned directly by Qdrant's RF-modified HNSW traversal |
+| `--rf-limit` | | `20` | Extra docs fetched by the RF query. For `rf` (RF+Rerank): these are rescored and merged with the context docs. For `pure-rf`: `--rf-limit` + `--rf-context-limit` docs are returned directly by Qdrant's RF-modified HNSW traversal |
 | `--cloud-inference` / `--no-cloud-inference` | | cloud on | Whether to embed queries via Qdrant cloud inference (`mxbread`) or locally via fastembed (`jina`) |
 
 ### Adding a new BEIR dataset
